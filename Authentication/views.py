@@ -36,24 +36,23 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 @api_view(['POST'])
-@csrf_exempt
 def register_customer(request):
     serializer = RegisterSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
-        # Generate JWT tokens immediately on registration
         refresh = RefreshToken.for_user(user)
         return Response({
-            "message": "User created successfully",
-            "status": True,
-            "role": user.role,
+            "message": "Registration successful!",
+            "status":  True,
+            "role":    user.role,
+            "email":   user.email,
+            "first_name": user.first_name,
             "tokens": {
-                "access": str(refresh.access_token),
+                "access":  str(refresh.access_token),
                 "refresh": str(refresh)
             }
         }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -122,7 +121,7 @@ def google_auth(request):
     except ValueError:
         return Response({'error': 'Invalid token', 'status': False}, status=status.HTTP_400_BAD_REQUEST)
 
-'''
+
 @api_view(['POST'])
 def google_auth(request):
     token = request.data.get('token')
@@ -165,6 +164,50 @@ def google_auth(request):
             "role":       user.role,        # ✅ role add
             "email":      user.email,       # ✅ email add
             "first_name": user.first_name,  # ✅ name add
+        }, status=status.HTTP_200_OK)
+
+    except ValueError:
+        return Response({'error': 'Invalid token', 'status': False}, status=status.HTTP_400_BAD_REQUEST)
+
+'''
+@api_view(['POST'])
+def google_auth(request):
+    token = request.data.get('token')
+    if not token:
+        return Response({'error': 'Token is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        id_info = id_token.verify_oauth2_token(
+            token,
+            google_requests.Request(),
+            settings.GOOGLE_OAUTH_CLIENT_ID
+        )
+        email      = id_info['email']
+        first_name = id_info.get('given_name', '')
+        last_name  = id_info.get('family_name', '')
+
+        user, created = User.objects.get_or_create(email=email)
+
+        if created:
+            # ✅ নতুন user — Google দিয়ে register
+            user.first_name          = first_name
+            user.last_name           = last_name
+            user.registration_method = 'google'
+            user.is_active           = True
+            user.is_verified         = True
+            user.save()
+        else:
+            # ✅ আগে থেকে আছে — যেকোনো method এ register করা হোক login করতে পারবে
+            # registration_method update করো না, শুধু login দাও
+            pass
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "tokens":     {"access": str(refresh.access_token), "refresh": str(refresh)},
+            "status":     True,
+            "role":       user.role,
+            "email":      user.email,
+            "first_name": user.first_name,
         }, status=status.HTTP_200_OK)
 
     except ValueError:

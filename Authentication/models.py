@@ -1,8 +1,5 @@
 from django.db import models
-
-# Create your models here.
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin
-from django.db import models 
 
 REGISTRATION_CHOICES = [
     ('email', 'Email'),
@@ -22,39 +19,31 @@ class CustomUserManager(BaseUserManager):
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
-
         return self.create_user(email, password, **extra_fields)
+
 
 class User(AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = (
         ('admin', 'Admin'),
         ('customer', 'Customer'),
     )
-    
-    email = models.EmailField(unique=True, help_text="The user's unique email address.")
-    first_name = models.CharField(max_length=30, default='', null=True, blank=True, help_text="The user's first name.")
-    last_name = models.CharField(max_length=30, default='', null=True, blank=True, help_text="The user's last name.")
 
+    email               = models.EmailField(unique=True)
+    first_name          = models.CharField(max_length=30, default='', null=True, blank=True)
+    last_name           = models.CharField(max_length=30, default='', null=True, blank=True)
     registration_method = models.CharField(max_length=20, choices=REGISTRATION_CHOICES, default='email')
+    is_staff            = models.BooleanField(default=False)
+    is_superuser        = models.BooleanField(default=False)
+    is_active           = models.BooleanField(default=True) 
+    is_verified         = models.BooleanField(default=True)  # ✅ True — সরাসরি active
+    date_joined         = models.DateTimeField(auto_now_add=True)
+    role                = models.CharField(max_length=10, choices=ROLE_CHOICES, default='customer')
 
-    is_staff =  models.BooleanField(default=False)
-    is_superuser = models.BooleanField(default=False, help_text="Indicates whether the user has all admin permissions. Defaults to False.")
-    is_active = models.BooleanField(default=True, help_text="Indicates whether the user account is active. Defaults to False and user needs to verify email on signup before it can be set to True.")
-    date_joined = models.DateTimeField(auto_now_add=True, help_text="The date and time when the user joined.")
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='customer')
-    
-    
+    objects        = CustomUserManager()
+    USERNAME_FIELD = 'email'
+
     def __str__(self):
         return self.email
 
-    objects = CustomUserManager()
-
-    USERNAME_FIELD = 'email'
-
     def get_full_name(self):
-        return f"{self.first_name} {self.last_name}" # John Doe
+        return f"{self.first_name} {self.last_name}"
