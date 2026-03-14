@@ -189,7 +189,7 @@ def google_auth(request):
         user, created = User.objects.get_or_create(email=email)
 
         if created:
-            # ✅ নতুন user — Google দিয়ে register
+            #New User
             user.first_name          = first_name
             user.last_name           = last_name
             user.registration_method = 'google'
@@ -197,8 +197,7 @@ def google_auth(request):
             user.is_verified         = True
             user.save()
         else:
-            # ✅ আগে থেকে আছে — যেকোনো method এ register করা হোক login করতে পারবে
-            # registration_method update করো না, শুধু login দাও
+            #for login
             pass
 
         refresh = RefreshToken.for_user(user)
